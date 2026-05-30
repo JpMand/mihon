@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.core.common.utils.mutate
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
@@ -28,12 +30,25 @@ class MigrateMangaScreenModel(
     private val sourceId: Long,
     private val sourceManager: SourceManager = Injekt.get(),
     private val getFavorites: GetFavorites = Injekt.get(),
+    private val getCategories : GetCategories = Injekt.get(),
 ) : StateScreenModel<MigrateMangaScreenModel.State>(State()) {
 
     private val _events: Channel<MigrationMangaEvent> = Channel()
     val events: Flow<MigrationMangaEvent> = _events.receiveAsFlow()
 
     init {
+        screenModelScope.launch {
+            mutableState.update { state ->
+                state.copy(source = sourceManager.getOrStub(sourceId))
+            }
+
+            getCategories.subscribe()
+                .catch { logcat(LogPriority.ERROR, it) }
+                .collectLatest { categories ->
+                    mutableState.update { it.copy(allcategories = categories.toImmutableList()) }
+                }
+        }
+
         screenModelScope.launch {
             mutableState.update { state ->
                 state.copy(source = sourceManager.getOrStub(sourceId))
@@ -53,7 +68,10 @@ class MigrateMangaScreenModel(
                         .toImmutableList()
                 }
                 .collectLatest { list ->
-                    mutableState.update { it.copy(titleList = list) }
+                    val categoryMap = list.associate { manga ->
+                        manga.id to getCategories.await(manga.id).map { it.id }.toSet().ifEmpty { setOf(0L) }
+                    }
+                    mutableState.update { it.copy(titleList = list, mangaCategories = categoryMap) }
                 }
         }
     }
@@ -71,11 +89,48 @@ class MigrateMangaScreenModel(
         mutableState.update { it.copy(selection = emptySet()) }
     }
 
+    fun toggleCategoryFilter(categoryId: Long) {
+        mutableState.update { state ->
+            state.copy(
+                categoryFilter = state.categoryFilter.mutate { set ->
+                    if (!set.remove(categoryId)) set.add(categoryId)
+                }
+            )
+        }
+    }
+
+    fun toggleStatusFilter(status: Int) {
+        mutableState.update { state ->
+            state.copy(
+                statusFilter = state.statusFilter.mutate { set ->
+                    if (!set.remove(status)) set.add(status)
+                }
+            )
+        }
+    }
+
+    fun selectAll() {
+        mutableState.update { state ->
+            state.copy(selection = state.titles.map { it.id }.toSet())
+        }
+    }
+
+    fun invertSelection() {
+        mutableState.update { state ->
+            val newSelection = state.titles.map { it.id }.filterNot { it in state.selection }.toSet()
+            state.copy(selection = newSelection)
+        }
+    }
+
     @Immutable
     data class State(
         val source: Source? = null,
         val selection: Set<Long> = emptySet(),
+        val allcategories: ImmutableList<Category> = persistentListOf(),
+        val categoryFilter: Set<Long> = emptySet(),
+        val statusFilter : Set<Int> = emptySet(),
         private val titleList: ImmutableList<Manga>? = null,
+        private val mangaCategories : Map<Long, Set<Long>> = emptyMap()
     ) {
 
         val titles: ImmutableList<Manga>
@@ -86,6 +141,27 @@ class MigrateMangaScreenModel(
 
         val isEmpty: Boolean
             get() = titles.isEmpty()
+
+        val filteredTitles: ImmutableList<Manga>
+            get() {
+                var list: List<Manga> = titles
+                if (categoryFilter.isNotEmpty()) {
+                    list = list.filter { manga ->
+                        mangaCategories[manga.id].orEmpty().any {
+                            it in categoryFilter
+                        }
+                    }
+                }
+                if (statusFilter.isNotEmpty()) {
+                    list = list.filter { manga ->
+                        manga.status.toInt() in statusFilter
+                    }
+                }
+                return list.toImmutableList()
+            }
+
+        val hasActiveFilters: Boolean
+            get() = categoryFilter.isNotEmpty() || statusFilter.isNotEmpty()
 
         val selectionMode = selection.isNotEmpty()
     }
