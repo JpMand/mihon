@@ -30,7 +30,7 @@ class MigrateMangaScreenModel(
     private val sourceId: Long,
     private val sourceManager: SourceManager = Injekt.get(),
     private val getFavorites: GetFavorites = Injekt.get(),
-    private val getCategories : GetCategories = Injekt.get(),
+    private val getCategories: GetCategories = Injekt.get(),
 ) : StateScreenModel<MigrateMangaScreenModel.State>(State()) {
 
     private val _events: Channel<MigrationMangaEvent> = Channel()
@@ -94,7 +94,7 @@ class MigrateMangaScreenModel(
             state.copy(
                 categoryFilter = state.categoryFilter.mutate { set ->
                     if (!set.remove(categoryId)) set.add(categoryId)
-                }
+                },
             )
         }
     }
@@ -104,7 +104,7 @@ class MigrateMangaScreenModel(
             state.copy(
                 statusFilter = state.statusFilter.mutate { set ->
                     if (!set.remove(status)) set.add(status)
-                }
+                },
             )
         }
     }
@@ -128,9 +128,9 @@ class MigrateMangaScreenModel(
         val selection: Set<Long> = emptySet(),
         val allcategories: ImmutableList<Category> = persistentListOf(),
         val categoryFilter: Set<Long> = emptySet(),
-        val statusFilter : Set<Int> = emptySet(),
+        val statusFilter: Set<Int> = emptySet(),
         private val titleList: ImmutableList<Manga>? = null,
-        private val mangaCategories : Map<Long, Set<Long>> = emptyMap()
+        private val mangaCategories: Map<Long, Set<Long>> = emptyMap(),
     ) {
 
         val titles: ImmutableList<Manga>

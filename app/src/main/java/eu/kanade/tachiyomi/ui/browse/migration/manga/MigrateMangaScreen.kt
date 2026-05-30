@@ -89,7 +89,7 @@ data class MigrateMangaScreen(
         Scaffold(
             topBar = { scrollBehavior ->
                 AppBar(
-                    title = if(state.selectionMode) "${state.selection.size}" else state.source!!.name,
+                    title = if (state.selectionMode) "${state.selection.size}" else state.source!!.name,
                     navigateUp = {
                         if (state.selectionMode) {
                             screenModel.clearSelection()
@@ -112,11 +112,15 @@ data class MigrateMangaScreen(
                                     icon = Icons.Outlined.FlipToBack,
                                     onClick = screenModel::invertSelection,
                                 ),
-                            )
+                            ),
                         )
                     },
                     actions = {
-                        val filterTint = if(state.hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current
+                        val filterTint = if (state.hasActiveFilters) {
+                            MaterialTheme.colorScheme.active
+                        } else {
+                            LocalContentColor.current
+                        }
                         AppBarActions(
                             persistentListOf(
                                 AppBar.Action(
@@ -128,7 +132,7 @@ data class MigrateMangaScreen(
                                     title = stringResource(MR.strings.action_filter),
                                     icon = Icons.Outlined.FilterList,
                                     iconTint = filterTint,
-                                    onClick = { showFilterDialog = true},
+                                    onClick = { showFilterDialog = true },
                                 ),
                             ),
                         )
@@ -140,7 +144,10 @@ data class MigrateMangaScreen(
                 SmallExtendedFloatingActionButton(
                     text = { Text(text = stringResource(MR.strings.migrationConfigScreen_continueButtonText)) },
                     icon = {
-                        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                            contentDescription = null,
+                        )
                     },
                     onClick = {
                         val selection = state.selection
@@ -182,7 +189,7 @@ data class MigrateMangaScreen(
             }
         }
 
-        if (showFilterDialog){
+        if (showFilterDialog) {
             MigrateMangeFilterDialog(
                 state = state,
                 onToggleCategories = screenModel::toggleCategoryFilter,
@@ -237,7 +244,7 @@ data class MigrateMangaScreen(
         onToggleCategories: (Long) -> Unit,
         onToggleStatus: (Int) -> Unit,
         onDismiss: () -> Unit,
-    ){
+    ) {
         AlertDialog(
             onDismissRequest = onDismiss,
             confirmButton = {
@@ -247,11 +254,11 @@ data class MigrateMangaScreen(
             },
             title = { Text(text = stringResource(MR.strings.action_filter)) },
             text = {
-                Column (
+                Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
-                ){
-                    if(state.statusFilter.isNotEmpty() || true){
+                ) {
+                    if (state.statusFilter.isNotEmpty() || true) {
                         HeadingItem(MR.strings.status)
                     }
                     val statuses = listOf(
@@ -274,7 +281,7 @@ data class MigrateMangaScreen(
                         }
                     }
 
-                    if(state.allcategories.isNotEmpty()){
+                    if (state.allcategories.isNotEmpty()) {
                         HeadingItem(MR.strings.categories)
                     }
                     FlowRow(
@@ -284,17 +291,19 @@ data class MigrateMangaScreen(
                             FilterChip(
                                 selected = category.id in state.categoryFilter,
                                 onClick = { onToggleCategories(category.id) },
-                                label = { Text(
-                                    when(category.isSystemCategory){
-                                        true -> stringResource(MR.strings.label_default)
-                                        false -> category.name
-                                    }
-                                ) },
+                                label = {
+                                    Text(
+                                        when (category.isSystemCategory) {
+                                            true -> stringResource(MR.strings.label_default)
+                                            false -> category.name
+                                        },
+                                    )
+                                },
                             )
                         }
                     }
                 }
-            }
+            },
         )
     }
 }
